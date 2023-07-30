@@ -1,0 +1,307 @@
+/* Styles for the authentication container */
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-image: linear-gradient(to bottom right, lightblue, white);
+}
+
+/* Styles for the form content */
+.form-content {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  max-width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Styles for the form heading */
+.form-heading {
+  color: blue;
+  font-size: 28px;
+  margin-bottom: 2rem;
+}
+
+/* Styles for the form input fields */
+.form-input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 20px;
+}
+
+/* Styles for the button */
+button {
+  background-color: blue;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  margin-bottom: 1rem;
+  font-size: 22px;
+}
+
+button:hover {
+  background-color: darkblue;
+}
+
+/* Styles for the form link */
+.form-link {
+  color: blue;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  font-size: 16px;
+}
+
+/* Styles for the error message */
+.error-message {
+  color: red;
+  font-size: 20px;
+  margin-top: 8px;
+  align-content: center;
+}
+
+/* Styles for the h1 heading within the auth container */
+.auth-container h1 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+/* Styles for paragraphs within the auth container */
+.auth-container p {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+/* Styles for buttons within the auth container */
+.auth-container button {
+  background-color: #4caf50;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+/* Styles for hover effect on buttons within the auth container */
+.auth-container button:hover {
+  background-color: #45a049;
+}
+
+/* Styles for the h2 heading within the auth container */
+.auth-container h2 {
+  font-size: 28px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+/* Styles for unordered lists within the auth container */
+.auth-container ul {
+  list-style: bullet;
+  padding: 0;
+}
+
+/* Styles for list items within the auth container */
+.auth-container li {
+  margin-bottom: 5px;
+  font-size: 18px;
+}
+
+/* Styles for the user name within paragraphs within the auth container */
+.auth-container p .user-name {
+  font-weight: bold;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard {
+  background-image: linear-gradient(to bottom, #ffffff, #add8e6); /* White to light blue gradient */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  color: teal;
+  margin-left: 20px;
+}
+
+.heading {
+  font-size: 36px;
+  font-weight: bold;
+  color: lightseagreen;
+  margin: 0;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 20px;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.username {
+  color: teal;
+  font-size: 24px;
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.profile-icon {
+  font-size: 30px;
+  color: teal;
+  margin-right: 10px;
+}
+
+.logout-btn {
+  background-image: linear-gradient(to bottom, #ffffff, #5f9ea0); /* White to cadetblue gradient */
+  color: teal;
+  border: none;
+  padding: 10px 15px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.upload-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: auto;
+  padding: 40px;
+  border: 9px dashed #5f9ea0; /* Cadetblue dashed border */
+  border-radius: 16px;
+
+  transition: background-color 0.3s ease-in-out;
+  background-color: #ffffff; /* White background color */
+}
+
+.upload-section.dragging {
+  background-image: linear-gradient(to bottom, #ffffff, #add8e6); /* White to light blue gradient while dragging */
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-label {
+  color: teal;
+  font-weight: bold;
+  font-size: 20px;
+  margin-bottom: 5px ;
+}
+
+.choose-file-btn {
+  background-image: linear-gradient(to bottom, #ffffff, #5f9ea0); /* White to cadetblue gradient */
+  color: teal;
+  border: none;
+  padding: 10px 10px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.upload-icon {
+  margin-right: 10px;
+}
+
+input[type='file'] {
+  display: none;
+}
+
+.file-name {
+  font-size: 20px;
+  color: teal;
+}
+
+.file-name {
+  color:teal;
+  margin-top: 16px;
+}
+
+.convert-btn {
+  background-image: linear-gradient(to bottom, #ffffff, teal);
+  color: teal;
+  border: none;
+  font-size: 24px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.remove-file-btn {
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+
+  transition: background-color 0.3s ease-in-out;
+  margin-left: 10px;
+  
+}
+
+.remove-file-btn:hover {
+  background-color: #c82333;
+}
+
+.upload-btn {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.upload-btn:hover {
+  background-color: #218838;
+}
+.uploaded-image {
+  max-width: 500px; /* Set the maximum width of the image */
+  max-height: 500px; /* Set the maximum height of the image */
+  border: 1px solid #ccc; /* Add a border to the image */
+  /* Add some spacing above the image */
+  object-fit: cover; /* Ensure the image maintains its aspect ratio and covers the container */
+}
