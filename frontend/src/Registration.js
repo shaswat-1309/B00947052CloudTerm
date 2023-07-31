@@ -88,7 +88,7 @@ const RegistrationForm = ({ setActiveTab }) => {
             };
 
             const response = await axios.post(
-                process.env.REACT_APP_API_URL + 'VerifyRegisterCode',
+                process.env.REACT_APP_API_URL + '/VerifyRegisterCode',
                 requestBody
             );
 
