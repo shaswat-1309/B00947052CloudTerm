@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUpload, faUserCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 import axios from "axios";
@@ -213,7 +211,6 @@ const Dashboard = () => {
             </div>
             <div className="navbar-right">
                 <div className="profile">
-                    <FontAwesomeIcon icon={faUserCircle} className="profile-icon" />
                     <span className="username">{username}</span>
                 </div>
                 <button className="logout-btn" onClick={handleLogout}>
@@ -227,7 +224,6 @@ const Dashboard = () => {
                         {uploadedFile ? '1 file chosen' : 'Drag and drop a pdf/image or click to upload'}
                     </label>
                     <div className="choose-file-btn" onClick={handleChooseFile}>
-                        <FontAwesomeIcon icon={faUpload} className="upload-icon" />
                         Choose File
                     </div>
                     <input id="file-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileUpload} />
@@ -237,7 +233,7 @@ const Dashboard = () => {
                         <p className="file-name">
                             Chosen File: {uploadedFile.name}
                             <button className="remove-file-btn" onClick={handleRemoveFile}>
-                                <FontAwesomeIcon icon={faTimes} className="remove-file-icon" />
+                                X
                             </button>
                         </p>
                         {/* Display the uploaded image */}

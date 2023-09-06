@@ -1,0 +1,1179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for Lambda functions
+
+Resources:
+
+  # Creating S3 bucket to store the images.
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: b00947052bucket
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            MaxAge: 3000
+            AllowedHeaders:
+              - "*"
+            ExposedHeaders:
+              - "Authorization"
+
+
+  # Creating cognito user pool to store the user's credentials.
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: MyUserPool
+      UsernameConfiguration:
+        CaseSensitive: false
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+        - Name: given_name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: myCloudApp
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+  # Set up an Amazon Simple Notification Service (SNS) to enable email notifications.
+  SNSservice:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: notification-service
+      FifoTopic: false
+      TopicName: snsemailservice
+      Subscription:
+        - Protocol: email
+          Endpoint: shaswatdoshi000@gmail.com
+
+  #creating DynamoDB table for the inventory
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "product"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "product"
+          KeyType: "HASH"
+      TableName: "inventory"
+      ProvisionedThroughput:
+        ReadCapacityUnits: '2'
+        WriteCapacityUnits: '2'
+
+
+  #creating DynamoDB table for the usertable
+  DynamoDBTableUser:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "email"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "email"
+          KeyType: "HASH"
+      TableName: "users"
+      ProvisionedThroughput:
+        ReadCapacityUnits: '2'
+        WriteCapacityUnits: '2'
+
+  # Lambda Functions
+  LoginFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LoginFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: Login.zip
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+          APP_CLIENT_ID: !Ref CognitoUserPoolClient
+
+
+  # Lambda Functions
+  VerifyLoginTokenFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: VerifyLoginTokenFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: VerifyLoginToken.zip
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+
+
+  # Lambda Functions
+  RegistrationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: RegistrationFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: Registration.zip
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+          APP_CLIENT_ID: !Ref CognitoUserPoolClient
+
+  # Lambda Functions
+  VerifyRegistrationTokenFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: VerifyRegistrationTokenFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: VerifyRegistrationToken.zip
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+          APP_CLIENT_ID: !Ref CognitoUserPoolClient
+          SNS_TOPIC_ARN: !Ref SNSservice
+          DYNAMODB_TABLE_NAME: !Ref DynamoDBTableUser
+
+  # Lambda Functions
+  UploadToS3Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: UploadToS3Function
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Timeout: 10
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: UploadToS3.zip
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref S3Bucket
+          TEXTRACT_FUNCTION_NAME: !Ref TextractExtractionFunction
+
+  # Lambda Functions
+  TextractExtractionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: TextractExtractionFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: TextractExtraction.zip
+
+  # Lambda Functions
+  UpdateInventoryFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: UpdateInventoryFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Timeout: 10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: UpdateInventory.zip
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref SNSservice
+          SNS_LAMBDA_FUNCTION_NAME: !Ref SNSEmailFunction
+          DYNAMODB_TABLE_NAME: !Ref DynamoDBTable
+
+  # Lambda Functions
+  SNSEmailFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: SNSEmail
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: SNSEmail.zip
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref SNSservice
+
+
+  # Lambda Functions
+  LogoutFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LogoutFunction
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Role: "arn:aws:iam::132438241515:role/LabRole"
+      Code:
+        S3Bucket: b00947052cloudformationbucket12
+        S3Key: Logout.zip
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+          APP_CLIENT_ID: !Ref CognitoUserPoolClient
+
+
+  #API Gateway to handle the requests.
+  TextractGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: "TextractGateway"
+      Description: "API gateway for pharmacy website"
+
+  # API Gateway Global to handle 4xx
+  Textractresponse4xx:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResponseType: DEFAULT_4XX
+      StatusCode: '404'
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+
+  # API Gateway Global to handle 5xx
+  Textractresponse5xx:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResponseType: DEFAULT_5XX
+      StatusCode: '500'
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+
+  #API Gateway resource for Login functionaity
+  Loginresource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "Login"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for Login functionality
+  Loginmethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref Loginresource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 404
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginFunction.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            "{
+              \"body\": $input.json('$')
+            }"
+        PassthroughBehavior: "WHEN_NO_TEMPLATES"
+        RequestParameters:
+          "integration.request.header.Content-Type": "'application/json'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 402
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+
+  # API Service Gateway Method for Login method OPTIONS
+  LoginmethodOPTIONS:
+    Type : "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref Loginresource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 401
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 402
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 402
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+
+  #API Gateway resource for Registration functionality
+  Registrationresource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "Registration"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for Registration functionality
+  Registrationmethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref Registrationresource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFunction.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            "{
+              \"body\": $input.json('$')
+            }"
+        PassthroughBehavior: "WHEN_NO_TEMPLATES"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # API Service Gateway Method for Registration method OPTIONS
+  RegistrationmethodOPTIONS:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref Registrationresource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  #API Gateway resource for VerifyRegisterCode functionality
+  VerifyRegisterCoderesource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "VerifyRegisterCode"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for VerifyRegisterCode functionality
+  VerifyRegisterCodemethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref VerifyRegisterCoderesource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyRegistrationTokenFunction.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            "{
+            \"body\": $input.json('$')
+            }"
+        PassthroughBehavior: "WHEN_NO_TEMPLATES"
+
+        RequestParameters:
+           "integration.request.header.Content-Type": "'application/json'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  # API Service Gateway Method for VerifyRegisterCode method OPTIONS
+  VerifyRegisterCodemethodOPTIONS:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref VerifyRegisterCoderesource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyRegistrationTokenFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  #API Gateway resource for VerifyLoginToken functionality
+  VerifyLoginTokenresource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "VerifyLoginToken"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for VerifyLoginToken functionality
+  VerifyLoginTokenmethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref VerifyLoginTokenresource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyLoginTokenFunction.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            "{
+                  \"body\": $input.json('$')
+             }"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  # API Service Gateway Method for VerifyLoginToken method OPTIONS
+  VerifyLoginTokenmethodOPTIONS:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref VerifyLoginTokenresource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyLoginTokenFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+
+
+  #API Gateway resource for UploadToS3 functionality
+  UploadToS3resource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "UploadToS3"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for UploadToS3 functionality
+  UploadToS3method:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref UploadToS3resource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadToS3Function.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            '{
+                  "body": $input.json("$")
+             }'
+        RequestParameters:
+          "integration.request.header.Content-Type": "'application/json'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  # API Service Gateway Method for UploadToS3 method OPTIONS
+  UploadToS3methodOPTIONS:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref UploadToS3resource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadToS3Function.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  #API Gateway resource for UpdateInventory functionality
+  UpdateInventoryresource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "UpdateInventory"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for UpdateInventory functionality
+  UpdateInventorymethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref UpdateInventoryresource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateInventoryFunction.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            "{
+                  \"body\": $input.json('$')
+             }"
+        RequestParameters:
+          "integration.request.header.Content-Type": "'application/json'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  # API Service Gateway Method for UpdateInventory method OPTIONS
+  UpdateInventorymethodOPTIONS:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref UpdateInventoryresource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateInventoryFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  #API Gateway resource for Logout functionality
+  Logoutresource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt
+        - TextractGateway
+        - RootResourceId
+      PathPart: "Logout"
+      RestApiId: !Ref TextractGateway
+
+  #API Service Gateway Method for Logout functionality
+  Logoutmethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref Logoutresource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LogoutFunction.Arn}/invocations"
+        RequestTemplates:
+          application/json:
+            '{
+                  "body": $input.json("$")
+             }'
+        RequestParameters:
+          "integration.request.header.Content-Type": "'application/json'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  # API Service Gateway Method for Logout method OPTIONS
+  LogoutmethodOPTIONS:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref TextractGateway
+      ResourceId: !Ref Logoutresource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST, OPTIONS'"
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LogoutFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+  gatewaydeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref TextractGateway
+      StageName: prod
+    DependsOn:
+      - Loginmethod
+      - LoginmethodOPTIONS
+      - Registrationmethod
+      - RegistrationmethodOPTIONS
+      - VerifyRegisterCodemethod
+      - VerifyRegisterCodemethodOPTIONS
+      - VerifyLoginTokenmethod
+      - VerifyLoginTokenmethodOPTIONS
+      - UploadToS3method
+      - UploadToS3methodOPTIONS
+      - UpdateInventorymethod
+      - UpdateInventorymethodOPTIONS
+      - Logoutmethod
+      - LogoutmethodOPTIONS
+      - Textractresponse4xx
+      - Textractresponse5xx
+
+
+  # Provide gateway lambda permission for login lambda function
+  LoginGatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt LoginFunction.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+  # Provide gateway lambda permission for register lambda function
+  RegistrationGatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt RegistrationFunction.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+  # Provide gateway lambda permission for verifycode lambda function
+  VerifyRegisterCodegatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt VerifyRegistrationTokenFunction.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+  # Provide gateway lambda permission for verifytoken lambda function
+  VerifyLoginTokenGatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt VerifyLoginTokenFunction.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+  # Provide gateway lambda permission for upload lambda function
+  UploadToS3Gatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt UploadToS3Function.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+  # Provide gateway lambda permission for upload lambda function
+  UpdateInventoryGatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt UpdateInventoryFunction.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+
+  # Provide gateway lambda permission for logout lambda function
+  LogoutGatewaypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt LogoutFunction.Arn
+      Principal: apigateway.amazonaws.com
+    DependsOn:
+      - gatewaydeployment
+
+
+  #To create a security group for ec2 instance
+  securitygroupec2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "security group for ec2 compute resource"
+      GroupName: ec2securitygroup
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+
+  #To create a ec2 instance
+  Textractec2:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - TextractGateway
+    Properties:
+      ImageId: ami-053b0d53c279acc90
+      InstanceType: t2.micro
+      KeyName: vockey
+      SecurityGroups:
+        - !Ref securitygroupec2
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          git clone https://github.com/shaswat-1309/B00947052CloudTerm.git
+          cd B00947052CloudTerm/frontend
+          sudo apt-get update
+          curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          sudo apt-get install -y build-essential
+          sudo apt-get install -y awscli
+          sudo apt-get install jq -y
+          aws configure set aws_access_key_id key
+          aws configure set aws_secret_access_key key
+          aws configure set aws_session_token key
+          aws configure set region region
+          gatewayid=$(aws apigateway get-rest-apis | jq -r '.items[] | select(.name=="TextractGateway") | .id')
+          REACT_APP_API_URL="https://${gatewayid}.execute-api.us-east-1.amazonaws.com/prod" 
+          echo "REACT_APP_API_URL=${REACT_APP_API_URL}" >> .env
+          sudo npm install
+          sudo npm install --save @fortawesome/fontawesome-svg-core
+          sudo npm start
+Outputs:
+  # Output the ARNs of the Lambda functions for reference
+  LoginFunctionArn:
+    Value: !GetAtt LoginFunction.Arn
+
+  VerifyLoginTokenFunctionArn:
+    Value: !GetAtt VerifyLoginTokenFunction.Arn
+
+  RegistrationFunctionArn:
+    Value: !GetAtt RegistrationFunction.Arn
+
+  VerifyRegistrationTokenFunctionArn:
+    Value: !GetAtt VerifyRegistrationTokenFunction.Arn
+
+  LogoutFunctionArn:
+    Value: !GetAtt LogoutFunction.Arn
+
+  UploadToS3FunctionArn:
+    Value: !GetAtt UploadToS3Function.Arn
+
+  TextractExtractionFunctionArn:
+    Value: !GetAtt TextractExtractionFunction.Arn
+
+  UpdateInventoryFunctionArn:
+    Value: !GetAtt UpdateInventoryFunction.Arn
+
+  SNSEmailFunctionArn:
+    Value: !GetAtt SNSEmailFunction.Arn
+
